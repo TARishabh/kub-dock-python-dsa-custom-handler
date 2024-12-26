@@ -1,0 +1,36 @@
+Run backend tests in oppia for single file and single test:
+
+python -m scripts.run_backend_tests --test_target=<MODULE_NAME>.<CLASS_NAME>.<METHOD_NAME>
+
+python -m scripts.run_backend_tests --test_target=core.domain.suggestion_services_test.SuggestionServicesUnitTests.test_update_translation_suggestion_rejects_image_removal
+
+python -m scripts.run_frontend_tests --specs_to_run="core/templates/pages/contributor-dashboard-page/modal-templates/translation-suggestion-review-modal.component.spec.ts"
+
+python -m scripts.run_frontend_tests --run_specific_tests --specs_to_run="core/templates/pages/contributor-dashboard-page/modal-templates/translation-suggestion-review-modal.component.spec.ts" --grep="should set the initial image count based on the translation HTML"
+
+
+python -m scripts.run_frontend_tests --specs_to_run="core/templates/pages/contributor-dashboard-page/modal-templates/translation-suggestion-review-modal.component.spec.ts" --check_coverage
+
+docker cp oppia-dev-server:/app/karma_coverage_reports ~/karma_coverage_reports
+Successfully copied 32.8kB to /home/dell/karma_coverage_reports
+
+cd /home/dell/karma_coverage_reports
+xdg-open ~/karma_coverage_reports/index.html
+
+
+HOW TO CREATE LOGS IN OPPIA:
+import os
+import logging
+
+DEBUG_FILE_PATH = os.path.join(os.getcwd(), 'gcs_debug.txt')
+
+ try:
+            with open(DEBUG_FILE_PATH, 'a') as debug_file:
+                debug_file.write(f'Generated GCS URL: {gcs_file_url}\n')
+                debug_file.write(f'Filepath: {filepath}\n')
+                debug_file.write(f'Entity: {self._entity_name}, Entity ID: {self._entity_id}\n')
+                debug_file.write('--------------------------------------------\n')
+        except Exception as e:
+            logging.error('Failed to write to debug file: %s', e)
+            
+
