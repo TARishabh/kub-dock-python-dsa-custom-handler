@@ -117,3 +117,92 @@ if __name__ == "__main__":
 
 You can also create a new workspace and while creating select the option
 Embedded and link it with the resource you created on azure.
+
+
+For Creating a Dashboard and Report in Power BI:
+
+Open Power BI desktop app, then go to Get data, select database, mine was
+postgresql, now in the server give the whole url of the database, and 
+give db_name which you want to connect
+
+NOTE - You have to go to Azure Portal, Resource Group in which you DB is 
+set up, and in Networking tab, allow the Windows(Power BI desktop running)
+laptop's IP in the allow section of IPs.
+
+Then select the tables opened in Power BI Desktop, after selecting
+Just load them in the section.
+
+Now drag and drop columns which you want to plot graph for tables,
+apply filters if you want (these filters will be shown in 
+developer sandbox by default).
+
+And code for applying custom filters are:
+const filter = {
+    $schema: "http://powerbi.com/product/schema#basic",
+    target: {
+        table: "public users_user",
+        column: "user_type"
+    },
+    operator: "In",
+    values: [40]
+};
+
+const dateFilter = {
+    $schema: "http://powerbi.com/product/schema#basic",
+    target: {
+        table: "public asset_failurereport",  // The table name
+        column: "failure_report_raised"       // The column to filter
+    },
+    operator: "Between",                     // Operator for date range
+    values: ["2024-12-02T00:00:00", "2024-12-02T00:00:00"]  // Date range in ISO format
+};
+
+
+try {
+    await report.updateFilters(models.FiltersOperations.Add, [filter, dateFilter]);
+    console.log("Report filter was added.");
+}
+catch (errors) {
+    console.log(errors);
+}
+
+
+To get page name (so that frontend can request using type as 'visual'
+instead of report):
+
+try {
+    const pages = await report.getPages();
+    let log = "Report pages:";
+    pages.forEach(function (page) {
+        log += "\n" + page.name + " - " + page.displayName;
+    });
+    console.log(log);
+}
+catch (error) {
+    console.log(error);
+}
+
+
+To get Reports name on the page:
+
+// Retrieve the page collection and get the visuals for the active page.
+try {
+    const pages = await report.getPages();
+    // Retrieve the page that contain the visual. For the sample report it will be the active page
+    let page = pages.filter(function (page) {
+        return page.isActive
+    })[0];
+    const visuals = await page.getVisuals();
+    console.log(
+        visuals.map(function (visual) {
+            return {
+                name: visual.name,
+                type: visual.type,
+                title: visual.title,
+                layout: visual.layout
+            };
+        }));
+}
+catch (errors) {
+    console.log(errors);
+}
