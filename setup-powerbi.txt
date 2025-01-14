@@ -1,0 +1,119 @@
+Create an App registration in azure (this will be used because this azure 
+resouece will acess the embedded power BI service which will be created later.
+
+Now give the permissions in app.powerbi.com with the same account as you
+logged in with on azure portal.
+
+Now give the admin permission of the workspace setting to the app 
+registration we created, and other permission also like 
+Workspace.ReadWrite.All .
+
+After this, go to azure portal and then search for Power BI embedded, and 
+create a resource, now in the desired repo link this by going to
+workspace settings on app.powerbi.com.
+
+Now you can use the code to generate token dynamically to access resource
+by the code :
+
+def get_access_token():
+    url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "scope": "https://analysis.windows.net/powerbi/api/.default"
+    }
+    response = requests.post(url, headers=headers, data=data)
+    response.raise_for_status()
+    return response.json()["access_token"]
+
+# Step 2: Generate Embed Token with Filters
+def generate_embed_token_with_filters(report_id, workspace_id, access_token, filters):
+    url = f"https://api.powerbi.com/v1.0/myorg/groups/{workspace_id}/reports/{report_id}/GenerateToken"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "accessLevel": "View",
+        "filters": filters  # Dynamic filters
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+    return response.json()["token"]
+
+# Step 3: Get Embed URL for the Report
+def get_embed_url(report_id, workspace_id, access_token):
+    url = f"https://api.powerbi.com/v1.0/myorg/groups/{workspace_id}/reports/{report_id}"
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()["embedUrl"]
+
+def construct_filters(query_params):
+    filters = []
+
+    # Example filter for time_period
+    if "time_period" in query_params:
+        try:
+            time_period = query_params["time_period"].strip()
+            print(f"Debug: Received time_period = '{time_period}'")  # Debug statement
+
+            # Replace multiple spaces or non-breaking spaces with a single space
+            time_period = " ".join(time_period.split())
+            print(f"Debug: Cleaned time_period = '{time_period}'")  # Debug cleaned value
+
+            # Split and extract exactly two parts
+            start_date, end_date = [date.strip() for date in time_period.split(" - ")]
+
+            filters.append({
+                "target": {
+                    "table": "public asset_failurereport",
+                    "column": "failure_report_raised"
+                },
+                "operator": "Between",
+                "values": [start_date, end_date]
+            })
+        except ValueError as e:
+            print(f"Error processing time_period: {e}")
+            raise ValueError("Invalid time_period format. Use 'YYYY-MM-DD - YYYY-MM-DD'.")
+    return filters
+
+
+# Step 5: Main Handler to Generate Embed URL and Token
+def handle_request(query_params):
+    access_token = get_access_token()
+
+    # Construct filters dynamically
+    filters = construct_filters(query_params)
+
+    # Get Embed URL
+    embed_url = get_embed_url(REPORT_ID, WORKSPACE_ID, access_token)
+
+    # Generate Embed Token
+    embed_token = generate_embed_token_with_filters(REPORT_ID, WORKSPACE_ID, access_token, filters)
+
+    return {
+        "embed_url": embed_url,
+        "embed_token": embed_token
+    }
+
+# Example Usage
+if __name__ == "__main__":
+    # Example query parameters
+    query_params = {
+        "time_period": "2024-05-01 - 2024-06-01",
+        # "entity": "entity-slug-example"
+    }
+
+    result = handle_request(query_params)
+    print("Embed URL:", result["embed_url"])
+    print("Embed Token:", result["embed_token"])
+
+
+
+You can also create a new workspace and while creating select the option
+Embedded and link it with the resource you created on azure.
